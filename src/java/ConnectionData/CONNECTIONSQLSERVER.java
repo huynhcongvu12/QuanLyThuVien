@@ -19,18 +19,25 @@ public class CONNECTIONSQLSERVER implements ICONNECTIONDATA {
         this.runningOnRender = isRenderEnvironment();
         validateRenderDatabaseEnvironment();
 
-        this.UserName = env("DB_USER", "sa");
-        this.PassWord = env("DB_PASSWORD", "123456789");
+        this.UserName = env("DB_USER", "");
+        this.PassWord = env("DB_PASSWORD", "");
         this.DataBaseName = env("DB_NAME", "QuanLyThuVien");
-        this.ServerName = env("DB_HOST", "LAPTOP-R8MA8LPR");
+        this.ServerName = env("DB_HOST", "");
         this.DriverClass = env("DB_DRIVER", "com.microsoft.sqlserver.jdbc.SQLServerDriver");
 
-        this.DriverURL = env("DB_URL", "jdbc:sqlserver://" + ServerName
-                + ":" + env("DB_PORT", "1433")
-                + ";databaseName=" + DataBaseName
-                + ";encrypt=" + env("DB_ENCRYPT", "false")
-                + ";trustServerCertificate=" + env("DB_TRUST_SERVER_CERTIFICATE", "true")
-                + ";integratedSecurity=false");
+        this.DriverURL = env("DB_URL", "");
+        if (this.DriverURL == null || this.DriverURL.trim().isEmpty()) {
+            if (this.ServerName != null && !this.ServerName.trim().isEmpty()) {
+                this.DriverURL = "jdbc:sqlserver://" + ServerName
+                        + ":" + env("DB_PORT", "1433")
+                        + ";databaseName=" + DataBaseName
+                        + ";encrypt=" + env("DB_ENCRYPT", "false")
+                        + ";trustServerCertificate=" + env("DB_TRUST_SERVER_CERTIFICATE", "true")
+                        + ";integratedSecurity=false";
+            } else if (LastError == null || LastError.trim().isEmpty()) {
+                LastError = "Thieu cau hinh database. Hay cau hinh DB_URL, DB_USER, DB_PASSWORD.";
+            }
+        }
     }
 
     private String env(String name, String defaultValue) {
@@ -52,18 +59,14 @@ public class CONNECTIONSQLSERVER implements ICONNECTIONDATA {
     }
 
     private void validateRenderDatabaseEnvironment() {
-        if (!runningOnRender) {
-            return;
-        }
-
         StringBuilder missing = new StringBuilder();
         appendMissing(missing, "DB_URL");
         appendMissing(missing, "DB_USER");
         appendMissing(missing, "DB_PASSWORD");
 
         if (missing.length() > 0) {
-            LastError = "Thieu bien moi truong database tren Render: " + missing
-                    + ". Hay cau hinh DB_URL, DB_USER, DB_PASSWORD trong Render > Environment.";
+            LastError = "Thieu bien moi truong database" + (runningOnRender ? " tren Render" : "")
+                    + ": " + missing + ". Hay cau hinh DB_URL, DB_USER, DB_PASSWORD.";
         }
     }
 

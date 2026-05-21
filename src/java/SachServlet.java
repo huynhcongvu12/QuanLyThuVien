@@ -22,45 +22,23 @@ public class SachServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
+        doPost(request, response);
     }
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         model.Account account = (model.Account) request.getSession().getAttribute("account");
-        Process_Data.Customer cus = new Process_Data.Customer();
         request.setCharacterEncoding("UTF-8");
-        response.setContentType("application/json");
+        response.setContentType("application/json;charset=UTF-8");
         response.setCharacterEncoding("UTF-8");
         if (account != null) {
-            if (account.getQuyen() == 1) {
-                String keyword = request.getParameter("search");
-                Process_Data.Sach Sach = new Process_Data.Sach();
-                Vector<model.Sach> listsach = Sach.searchSach(keyword);
-                String json = new com.google.gson.Gson().toJson(listsach);
-                PrintWriter out = response.getWriter();
-                out.print(json);
-                out.flush();
-            } else if (account.getQuyen() == 0) {
-                String keyword = request.getParameter("search");
-                Process_Data.Sach Sach = new Process_Data.Sach();
-                Vector<model.Sach> listsach = Sach.searchSach(keyword);
-                String json = new com.google.gson.Gson().toJson(listsach);
-                PrintWriter out = response.getWriter();
-                out.print(json);
-                out.flush();
-            } else {
-                String keyword = request.getParameter("search");
-                Process_Data.Sach Sach = new Process_Data.Sach();
-                Vector<model.Sach> listsach = Sach.searchSach(keyword);
-                String json = new com.google.gson.Gson().toJson(listsach);
-                PrintWriter out = response.getWriter();
-                out.print(json);
-                out.flush();
-            }
-
-        } else {
-
+            String keyword = request.getParameter("search");
+            Process_Data.Sach Sach = new Process_Data.Sach();
+            Vector<model.Sach> listsach = Sach.searchSach(keyword);
+            String json = new com.google.gson.Gson().toJson(listsach);
+            PrintWriter out = response.getWriter();
+            out.print(json);
+            out.flush();
         }
     }
 }
