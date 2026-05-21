@@ -1,0 +1,2 @@
+/* File giữ tương thích vì một số JSP đang gọi styles.css ở root. */
+@import url("assets/styles.css");
