@@ -13,8 +13,12 @@ public class CONNECTIONSQLSERVER implements ICONNECTIONDATA {
     public Statement stm = null;
     public String DriverURL;
     public String LastError = null;
+    private final boolean runningOnRender;
 
     public CONNECTIONSQLSERVER() {
+        this.runningOnRender = isRenderEnvironment();
+        validateRenderDatabaseEnvironment();
+
         this.UserName = env("DB_USER", "sa");
         this.PassWord = env("DB_PASSWORD", "123456789");
         this.DataBaseName = env("DB_NAME", "QuanLyThuVien");
@@ -37,10 +41,49 @@ public class CONNECTIONSQLSERVER implements ICONNECTIONDATA {
         return (value == null || value.trim().isEmpty()) ? defaultValue : value.trim();
     }
 
+    private String env(String name) {
+        return env(name, null);
+    }
+
+    private boolean isRenderEnvironment() {
+        return env("RENDER") != null
+                || env("RENDER_SERVICE_ID") != null
+                || env("RENDER_EXTERNAL_URL") != null;
+    }
+
+    private void validateRenderDatabaseEnvironment() {
+        if (!runningOnRender) {
+            return;
+        }
+
+        StringBuilder missing = new StringBuilder();
+        appendMissing(missing, "DB_URL");
+        appendMissing(missing, "DB_USER");
+        appendMissing(missing, "DB_PASSWORD");
+
+        if (missing.length() > 0) {
+            LastError = "Thieu bien moi truong database tren Render: " + missing
+                    + ". Hay cau hinh DB_URL, DB_USER, DB_PASSWORD trong Render > Environment.";
+        }
+    }
+
+    private void appendMissing(StringBuilder missing, String name) {
+        if (env(name) != null) {
+            return;
+        }
+        if (missing.length() > 0) {
+            missing.append(", ");
+        }
+        missing.append(name);
+    }
+
     @Override
     public void Open() {
         try {
-            LastError = null;
+            if (LastError != null && !LastError.trim().isEmpty()) {
+                System.out.println("LOI CAU HINH DATABASE! " + LastError);
+                return;
+            }
             Class.forName(DriverClass);
             cnn = DriverManager.getConnection(DriverURL, UserName, PassWord);
             stm = cnn.createStatement();

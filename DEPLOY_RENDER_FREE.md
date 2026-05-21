@@ -1,141 +1,107 @@
 # Deploy QuanLyThuVien len Render Free
 
-## 1. Ket qua kiem tra project
+Tai lieu nay ghi lai checklist sau khi project da duoc chuan bi deploy Render bang Docker va Tomcat 9.
 
-- Project la Java Web Servlet/JSP dang NetBeans Ant project.
-- Server cau hinh trong `nbproject/project.properties`: `j2ee.server.type=Tomcat`.
-- Tomcat local trong `nbproject/private/private.properties`: `apache-tomcat-9.0.73`.
-- WAR output: `dist/QuanLyThuVien.war`.
-- Servlet mapping dang dung annotation `@WebServlet`; `web/WEB-INF/web.xml` chi khai bao welcome file, session timeout va error pages.
-- Tai nguyen CSS/JS/anh nam trong `web/assets`, `web/image`; Dockerfile deploy WAR thanh `ROOT.war` va `context.xml` da bo hard-code `/QuanLyThuVien` de giam loi sai path khi deploy online.
+## 1. Ket qua kiem tra
 
-## 2. Build WAR
+- `Dockerfile` dang copy dung file WAR: `dist/QuanLyThuVien.war`.
+- WAR duoc deploy thanh `/usr/local/tomcat/webapps/ROOT.war`, nen URL chay tren Render la `https://<service-name>.onrender.com/`.
+- `dist/QuanLyThuVien.war` phai ton tai truoc khi push len GitHub, vi Dockerfile copy truc tiep file nay.
+- `web/META-INF/context.xml` khong hard-code `/QuanLyThuVien`; app chay duoc o root context khi WAR duoc doi thanh `ROOT.war`.
+- CSS/JS/image duoc dat trong `web/assets` va `web/styles.css`; cac duong dan hien tai chay duoc khi deploy o root `/`.
+- `CONNECTIONSQLSERVER.java` van dung SQL Server, khong doi sang MySQL/PostgreSQL.
+- Khi chay tren Render, app yeu cau du 3 bien `DB_URL`, `DB_USER`, `DB_PASSWORD`. Neu thieu, app hien thong bao loi ro tren man hinh login/register hoac trang 500, khong crash trang trang.
 
-### Cach khuyen nghi bang NetBeans
+## 2. Dockerfile
 
-1. Mo project trong NetBeans.
-2. Chon server Tomcat 9, JDK 17.
-3. Chuot phai project > Clean and Build.
-4. Kiem tra file WAR moi tai `dist/QuanLyThuVien.war`.
+```dockerfile
+FROM tomcat:9.0-jdk17-temurin
 
-### Cach build bang Ant cua NetBeans tren may hien tai
+RUN rm -rf /usr/local/tomcat/webapps/*
+
+COPY dist/QuanLyThuVien.war /usr/local/tomcat/webapps/ROOT.war
+
+ENV CATALINA_OPTS="-Dfile.encoding=UTF-8"
+EXPOSE 8080
+
+CMD ["catalina.sh", "run"]
+```
+
+Sau khi deploy, truy cap:
+
+```text
+https://<service-name>.onrender.com/
+```
+
+Khong dung:
+
+```text
+https://<service-name>.onrender.com/QuanLyThuVien
+```
+
+## 3. Build WAR truoc khi push
+
+Lenh build tren may hien tai:
 
 ```powershell
 & 'C:\Program Files\Apache NetBeans\extide\ant\bin\ant.bat' "-Dlibs.CopyLibs.classpath=C:\Program Files\Apache NetBeans\java\ant\extra\org-netbeans-modules-java-j2seproject-copylibstask.jar" "-Dplatforms.JDK_17.home=C:\Program Files\Eclipse Adoptium\jdk-17.0.16.8-hotspot" clean dist
 ```
 
-Neu may khac, doi 2 duong dan `ant.bat` va `jdk-17...` theo may do.
-
-## 3. Dockerfile
-
-Project da co `Dockerfile`. WAR duoc copy thanh `ROOT.war`, nen khi deploy xong truy cap truc tiep:
+Build thanh cong khi log co:
 
 ```text
-https://ten-service.onrender.com/
+BUILD SUCCESSFUL
 ```
 
-Khong can them `/QuanLyThuVien`.
+File can co sau build:
 
-## 4. Push GitHub
+```text
+dist/QuanLyThuVien.war
+```
 
-Neu thu muc chua co Git:
+## 4. Environment Variables can nhap tren Render
+
+Nhap dung 3 bien sau trong Render Dashboard > Web Service > Environment:
+
+```text
+DB_URL=jdbc:sqlserver://<sql-server-host>:1433;databaseName=QuanLyThuVien;encrypt=true;trustServerCertificate=true;integratedSecurity=false
+DB_USER=<sql-server-username>
+DB_PASSWORD=<sql-server-password>
+```
+
+Ghi chu:
+
+- `<sql-server-host>` phai la host SQL Server public ma Render co the truy cap tu internet.
+- Neu SQL Server dung port khac `1433`, sua port trong `DB_URL`.
+- Khong can nhap `DB_HOST`, `DB_PORT`, `DB_NAME` tren Render neu da dung `DB_URL`.
+- Project nay dang dung SQL Server va driver `mssql-jdbc`; khong chuyen database sang MySQL/PostgreSQL khi chua co yeu cau.
+
+## 5. Cac buoc deploy Render Free
+
+1. Push project len GitHub.
+2. Vao Render Dashboard.
+3. Chon New > Web Service.
+4. Connect repo GitHub `QuanLyThuVien`.
+5. Runtime chon Docker.
+6. Plan chon Free.
+7. Them Environment Variables: `DB_URL`, `DB_USER`, `DB_PASSWORD`.
+8. Bam Create Web Service.
+9. Doi Render build Docker image va start Tomcat.
+10. Mo URL `https://<service-name>.onrender.com/`.
+
+## 6. Checklist test sau deploy
+
+1. Trang `/` tu dong vao `Login.jsp`.
+2. CSS/JS/logo/background hien dung.
+3. Mo `Register.jsp` khong loi asset.
+4. Thu login/register khi co DB online.
+5. Neu thieu bien DB tren Render, man hinh phai bao ro thieu `DB_URL`, `DB_USER`, `DB_PASSWORD`.
+6. Khong them `/QuanLyThuVien` vao URL sau deploy.
+
+## 7. Push sau khi build
 
 ```powershell
-git init
 git add .
-git commit -m "Prepare servlet jsp app for Render deployment"
-git branch -M main
-git remote add origin https://github.com/<username>/<repo>.git
-git push -u origin main
+git commit -m "Prepare Render deployment checklist"
+git push
 ```
-
-Moi lan sua code Java/JSP truoc khi push nen chay lai build WAR, vi Dockerfile dang dung file `dist/QuanLyThuVien.war`.
-
-## 5. Deploy Render Free
-
-1. Vao Render Dashboard.
-2. New > Web Service.
-3. Ket noi GitHub repo.
-4. Chon runtime/language la Docker.
-5. Chon plan Free.
-6. Render se build image tu `Dockerfile` va chay `CMD` trong Dockerfile.
-7. Sau khi deploy xong, mo URL dang `https://<service-name>.onrender.com/`.
-
-Render ho tro deploy Docker tu Dockerfile trong repo va mac dinh chay `CMD` cua Dockerfile. Web service can bind HTTP port; Tomcat trong image nay chay cong `8080`, Render thuong detect duoc cong nay.
-
-## 6. Cau hinh database bang bien moi truong
-
-Code da doi `CONNECTIONSQLSERVER.java` de doc bien moi truong, van giu fallback local cu de chay trong NetBeans.
-
-Bien moi truong can nhap tren Render > Service > Environment:
-
-```text
-DB_URL=jdbc:sqlserver://<host>:1433;databaseName=QuanLyThuVien;encrypt=true;trustServerCertificate=true;integratedSecurity=false
-DB_USER=<username>
-DB_PASSWORD=<password>
-```
-
-3 bien tren la bo khuyen nghi cho deploy Render. Neu khong nhap `DB_URL`, app se fallback sang cau hinh local cu va se khong ket noi duoc tren Render. Khi login/register gap loi ket noi, man hinh se hien thong bao kiem tra `DB_URL`, `DB_USER`, `DB_PASSWORD`.
-
-Co the dung dang tach bien neu khong dung `DB_URL`:
-
-```text
-DB_HOST=<host>
-DB_PORT=1433
-DB_NAME=QuanLyThuVien
-DB_USER=<username>
-DB_PASSWORD=<password>
-DB_ENCRYPT=true
-DB_TRUST_SERVER_CERTIFICATE=true
-```
-
-Neu deploy demo ma chua co database online, web van len giao dien dang nhap nhung dang nhap/chuc nang du lieu se loi ket noi DB.
-
-## 7. Database
-
-Project hien dang phu thuoc SQL Server/T-SQL:
-
-- Driver `mssql-jdbc-12.8.1.jre11.jar`.
-- Cu phap `TOP`, `GETDATE()`, `ISNULL`, `DATEDIFF`, `N'...'`.
-- Nhieu stored procedure trong file `SQL_CHUAN_DAY_DU_YEU_CAU_THU_VIEN.sql`.
-
-Theo yeu cau hien tai, khong chuyen database sang MySQL/PostgreSQL. De demo nhanh va it rui ro nhat:
-
-1. Giu SQL Server, dung SQL Server online/cloud neu co goi phu hop, roi cau hinh `DB_URL`, `DB_USER`, `DB_PASSWORD`.
-2. Voi bai nop can chay on dinh, phuong an thuc te nhat la dung mot SQL Server co public host tam thoi, hoac demo local database neu khong tim duoc SQL Server free on dinh.
-3. Chi migrate sang PostgreSQL/MySQL khi co yeu cau rieng, vi can sua schema, stored procedures va SQL trong Java.
-
-## 8. Neu chuyen sang PostgreSQL/MySQL
-
-Can lam toi thieu:
-
-- Them driver PostgreSQL hoac MySQL vao `web/WEB-INF/lib`.
-- Tao lop connection moi hoac doi `CONNECTIONSQLSERVER`.
-- Convert script:
-  - `IDENTITY(1,1)` sang `SERIAL`/`GENERATED ... AS IDENTITY` hoac `AUTO_INCREMENT`.
-  - `NVARCHAR` sang `VARCHAR`/`TEXT`.
-  - `GETDATE()` sang `CURRENT_TIMESTAMP`/`CURRENT_DATE`.
-  - `ISNULL()` sang `COALESCE()`.
-  - `TOP 1` sang `LIMIT 1`.
-  - Stored procedure T-SQL sang function/procedure tuong ung.
-- Sua cac cau SQL hard-code trong `src/java/Process_Data`.
-- Test lai dang nhap, dang ky, CRUD sach, phieu muon, phieu tra, phieu phat.
-
-## 9. Checklist truoc khi nop/demo
-
-1. Chay Clean and Build de tao `dist/QuanLyThuVien.war`.
-2. Commit ca `Dockerfile`, `.dockerignore`, `DEPLOY_RENDER_FREE.md`, `dist/QuanLyThuVien.war`.
-3. Push GitHub.
-4. Tao Render Web Service bang Docker, Free plan.
-5. Them bien moi truong database: `DB_URL`, `DB_USER`, `DB_PASSWORD`.
-6. Deploy va mo `/`.
-7. Test `/Login.jsp`, `/Register.jsp`, dang nhap Admin/Staff/Customer, CSS/JS/anh va cac thao tac DB.
-
-## 10. Nguon tham khao
-
-- Render Docker docs: https://render.com/docs/docker
-- Render Web Services/port binding: https://render.com/docs/web-services
-- Render deploy flow: https://render.com/docs/deploys
-- Render Free: https://render.com/free
-- Neon Postgres Free: https://neon.com/docs/introduction/pro-plan
-- Aiven MySQL Free: https://aiven.io/docs/products/mysql/concepts/mysql-free-tier
